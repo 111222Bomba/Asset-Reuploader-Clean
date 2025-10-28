@@ -10,23 +10,30 @@ import (
 	"os"
 
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/router"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // Sadece veri yapısını (RawRequest) içeri aktarıyoruz.
 )
 
 // Reupload, Animation varlığını yeniden yükler
-func Reupload(c *roblox.Client, r *router.RawRequest) error {
+// types.RawRequest kullanılarak döngü kırılmıştır.
+func Reupload(c *roblox.Client, r *types.RawRequest) error {
+	// Animasyon yükleme API URL'i
 	uploadURL := fmt.Sprintf("https://data.roblox.com/ide/publish/uploadanimation?assetId=%d", r.AssetID)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
+	// Dosya yolu Plugin'den geliyor
 	file, err := os.Open(r.ExportPath) 
 	if err != nil {
 		return fmt.Errorf("animasyon dosyası açılamadı: %w", err)
 	}
 	defer file.Close()
 
-	part, _ := writer.CreateFormFile("asset", r.ExportPath) // Animasyon için form alanı "asset"
+	// Dosyayı forma ekle: Animasyon için form alanı genellikle "asset"
+	part, err := writer.CreateFormFile("asset", r.ExportPath) 
+	if err != nil {
+		return err
+	}
 	io.Copy(part, file)
 
 	writer.Close()
@@ -34,7 +41,7 @@ func Reupload(c *roblox.Client, r *router.RawRequest) error {
 	// İsteği oluştur
 	req, _ := http.NewRequest("POST", uploadURL, body)
 	req.Header.Set("Cookie", ".ROBLOSECURITY=" + c.Cookie)
-	req.Header.Set("X-CSRF-TOKEN", c.GetToken()) // KRİTİK: CSRF Token
+	req.Header.Set("X-CSRF-TOKEN", c.GetToken()) // CSRF Token
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	// İsteği gönder
