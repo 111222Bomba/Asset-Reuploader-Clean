@@ -1,4 +1,4 @@
-// internal/router/router.go
+// internal/router/router.go (GÜNCELLENMİŞ)
 package router
 
 import (
@@ -9,16 +9,10 @@ import (
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/assets/animation"
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/assets/sound"
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // YENİ IMPORT
 )
 
-// RawRequest: Plugin'den gelen ham JSON verisi yapısı
-type RawRequest struct {
-	UniverseID    int64  `json:"universeId"`
-	PlaceID       int64  `json:"placeId"`
-	AssetID       int64  `json:"assetId"`
-	AssetType     string `json:"assetType"` // "Sound", "Animation", etc.
-	ExportPath    string `json:"exportPath"` // Plugin'in gönderdiği dosya yolu
-}
+// RawRequest yapısı silindi. Artık types.RawRequest kullanılıyor.
 
 type Router struct {
 	Client *roblox.Client
@@ -34,7 +28,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var rawReq RawRequest
+	var rawReq types.RawRequest // types.RawRequest kullanıldı
 	if err := json.NewDecoder(req.Body).Decode(&rawReq); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Invalid JSON request"})
