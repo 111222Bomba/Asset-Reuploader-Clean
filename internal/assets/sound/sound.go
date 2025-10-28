@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // Döngüyü kırmak için kullanılan yeni paket
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // Döngüyü kırmak için
 )
 
 // Reupload, Sound varlığını yeniden yükler
@@ -43,8 +43,8 @@ func Reupload(c *roblox.Client, r *types.RawRequest) error {
 	req.Header.Set("X-CSRF-TOKEN", c.GetToken()) // CSRF Token ekleniyor
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	
-	// 4. İsteği gönder
-	resp, err := c.httpClient.Do(req)
+	// 4. İsteği gönder (DÜZELTME UYGULANDI: c.HTTPClient)
+	resp, err := c.HTTPClient.Do(req) 
 	if err != nil {
 		return err
 	}
