@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Plugin'in ihtiyaç duyduğu temel yapılar (develop paketinden temizlendi)
+// Plugin'in ihtiyaç duyduğu temel yapılar
 type Creator struct {
 	Type string 
 	TargetID int64
@@ -23,17 +23,20 @@ type AssetInfo struct {
 
 type Client struct {
 	Cookie string
-	httpClient *http.Client
-	token string // CSRF Token
+	// DÜZELTME: "HTTPClient" olarak değiştirildi (Dışa aktarılabilir/Public hale getirildi)
+	HTTPClient *http.Client 
+	token string 
 	tokenMutex sync.RWMutex
 }
 
 func NewClient(cookie string) (*Client, error) {
 	c := &Client{
 		Cookie: strings.TrimSpace(cookie),
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		// HTTPClient başlatılıyor
+		HTTPClient: &http.Client{Timeout: 30 * time.Second}, 
 	}
 	
+	// Çerez geçerliliğini kontrol etmek için CSRF token çekilir
 	if err := c.fetchCSRFToken(); err != nil {
 		return nil, err
 	}
@@ -45,7 +48,8 @@ func (c *Client) fetchCSRFToken() error {
 	req, _ := http.NewRequest("OPTIONS", "https://auth.roblox.com/v1/logout", nil)
 	req.Header.Set("Cookie", ".ROBLOSECURITY=" + c.Cookie)
 
-	resp, err := c.httpClient.Do(req)
+	// HTTPClient kullanılarak istek gönderiliyor
+	resp, err := c.HTTPClient.Do(req) 
 	if err != nil {
 		return err
 	}
