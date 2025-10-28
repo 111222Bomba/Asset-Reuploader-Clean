@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+    "io" // Hata ayıklama için (response body okuma)
 )
 
 // Plugin'in ihtiyaç duyduğu temel yapılar
@@ -23,7 +24,7 @@ type AssetInfo struct {
 
 type Client struct {
 	Cookie string
-	// DÜZELTME: "HTTPClient" olarak değiştirildi (Dışa aktarılabilir/Public hale getirildi)
+	// Düzeltildi: "HTTPClient" olarak değiştirildi (Dışa aktarılabilir)
 	HTTPClient *http.Client 
 	token string 
 	tokenMutex sync.RWMutex
@@ -44,8 +45,9 @@ func NewClient(cookie string) (*Client, error) {
 }
 
 func (c *Client) fetchCSRFToken() error {
-	// Options isteği ile CSRF token'ı çekmek
-	req, _ := http.NewRequest("OPTIONS", "https://auth.roblox.com/v1/logout", nil)
+	// NİHAİ DENEME: POST isteğini kabul eden güvenilir bir Avatar API endpoint'i
+	req, _ := http.NewRequest("POST", "https://avatar.roblox.com/v1/avatar/set-player-avatar-type", nil)
+	
 	req.Header.Set("Cookie", ".ROBLOSECURITY=" + c.Cookie)
 
 	// HTTPClient kullanılarak istek gönderiliyor
@@ -56,9 +58,15 @@ func (c *Client) fetchCSRFToken() error {
 	defer resp.Body.Close()
 
 	token := resp.Header.Get("x-csrf-token")
-	if token == "" || resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("CSRF token alınamadı. Durum: %d", resp.StatusCode)
+	
+	// Kontrol: token alınmış mı?
+	if token == "" {
+        // Hata ayıklama için hata detaylarını alıyoruz
+		responseBody, _ := io.ReadAll(resp.Body) 
+		return fmt.Errorf("CSRF token alınamadı. Durum: %d. Çerez Hatalı. Yanıt: %s", resp.StatusCode, string(responseBody))
 	}
+	
+	// Token başarıyla alındı.
 	c.SetToken(token)
 	return nil
 }
