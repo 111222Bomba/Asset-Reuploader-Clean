@@ -10,11 +10,10 @@ import (
 	"os"
 
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // Sadece veri yapısını (RawRequest) içeri aktarıyoruz.
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // Döngüyü kırmak için
 )
 
 // Reupload, Animation varlığını yeniden yükler
-// types.RawRequest kullanılarak döngü kırılmıştır.
 func Reupload(c *roblox.Client, r *types.RawRequest) error {
 	// Animasyon yükleme API URL'i
 	uploadURL := fmt.Sprintf("https://data.roblox.com/ide/publish/uploadanimation?assetId=%d", r.AssetID)
@@ -29,7 +28,7 @@ func Reupload(c *roblox.Client, r *types.RawRequest) error {
 	}
 	defer file.Close()
 
-	// Dosyayı forma ekle: Animasyon için form alanı genellikle "asset"
+	// Dosyayı forma ekle: Form alanı "asset"
 	part, err := writer.CreateFormFile("asset", r.ExportPath) 
 	if err != nil {
 		return err
@@ -44,8 +43,8 @@ func Reupload(c *roblox.Client, r *types.RawRequest) error {
 	req.Header.Set("X-CSRF-TOKEN", c.GetToken()) // CSRF Token
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	// İsteği gönder
-	resp, err := c.httpClient.Do(req)
+	// İsteği gönder (DÜZELTME UYGULANDI: c.HTTPClient)
+	resp, err := c.HTTPClient.Do(req) 
 	if err != nil {
 		return err
 	}
