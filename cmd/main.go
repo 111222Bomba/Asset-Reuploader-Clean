@@ -10,8 +10,8 @@ import (
     "os" // Sadece örnek olması için
     
 	// Proje paketlerinizi içe aktarın
-	"github.com/111222Bomba/asset-reuploader-clean/internal/roblox"
-	"github.com/111222Bomba/asset-reuploader-clean/internal/assets"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/assets"
 )
 
 const Port = "38073"
@@ -109,3 +109,4 @@ func main() {
 		log.Fatalf("HTTP sunucusu başlatılamadı: %v", err)
 	}
 }
+
