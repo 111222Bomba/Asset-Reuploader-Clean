@@ -10,8 +10,8 @@ import (
     "os" // Sadece örnek olması için
     
 	// Proje paketlerinizi içe aktarın
-	"asset-reuploader-clean/internal/roblox"
-	"asset-reuploader-clean/pkg/asset"
+	"github.com/111222Bomba/asset-reuploader-clean/internal/roblox"
+	"github.com/111222Bomba/asset-reuploader-clean/assets"
 )
 
 const Port = "38073"
