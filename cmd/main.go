@@ -2,80 +2,110 @@
 package main
 
 import (
-	"bufio" // Kullanıcıdan girdi almak için
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"os"
-	"strings"
-
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/router"
+    "os" // Sadece örnek olması için
+    
+	// Proje paketlerinizi içe aktarın
+	"asset-reuploader-clean/internal/roblox"
+	"asset-reuploader-clean/pkg/asset"
 )
 
-// Plugin'in dinlemesi gereken Port ve Cookie dosyası
-const (
-	Port = "38073" 
-	CookieFile = "cookie.txt"
-)
+const Port = "38073"
 
-// getCookieFromUser, kullanıcıdan .ROBLOSECURITY çerezini alır.
-func getCookieFromUser() string {
-	reader := bufio.NewReader(os.Stdin)
-	
-	for {
-		fmt.Print("Lütfen .ROBLOSECURITY çerezinizi yapıştırın (UYARI: Bu çerezi kimseyle paylaşmayın!): ")
-		cookie, _ := reader.ReadString('\n')
-		cookie = strings.TrimSpace(cookie)
-		
-		if cookie == "" {
-			fmt.Println("Hata: Çerez boş olamaz. Tekrar deneyin.")
-			continue
-		}
-
-		return cookie
-	}
+// Payload yapısı (Lua script'inden gelen JSON)
+type ReuploadPayload struct {
+	UniverseId int64  `json:"universeId"`
+	PlaceId    int64  `json:"placeId"`
+	AssetId    int64  `json:"assetId"`
+	AssetType  string `json:"assetType"`
+	ExportPath string `json:"exportPath"`
 }
 
+// Global Roblox istemcisi
+var robloxClient *roblox.Client
+
+// --- HTTP İŞLEYİCİSİ (Handler) ---
+
+func handleReupload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+    
+    // Yalnızca POST isteklerini kabul et
+    if r.Method != http.MethodPost {
+        http.Error(w, `{"success":false,"error":"Sadece POST istekleri kabul edilir."}`, http.StatusMethodNotAllowed)
+        return
+    }
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Printf("KRİTİK SUNUCU HATASI: İstek gövdesi okunamadı: %s\n", err.Error()) 
+		http.Error(w, `{"success":false,"error":"Invalid request body"}`, http.StatusInternalServerError)
+		return
+	}
+
+	var payload ReuploadPayload
+	err = json.Unmarshal(body, &payload)
+	if err != nil {
+		fmt.Printf("KRİTİK SUNUCU HATASI: JSON çözümleme hatası: %s\n", err.Error()) 
+		http.Error(w, `{"success":false,"error":"Invalid JSON request"}`, http.StatusBadRequest)
+		return
+	}
+    
+    // Payload verilerini logla
+    log.Printf("Gelen istek: Varlık ID: %d, Tip: %s, Yol: %s", payload.AssetId, payload.AssetType, payload.ExportPath)
+
+	// --- Varlık Yükleme İşlemi ---
+	
+	// Varsayım: robloxClient global olarak ayarlandı
+	if robloxClient == nil {
+		err = fmt.Errorf("Roblox istemcisi başlatılmamış.")
+	} else {
+        // Gerçek yükleme işlevini çağır
+        // Bu fonksiyonun, varlık yükleme ve çerez yönetimini yaptığı varsayılır.
+		err = asset.ReuploadAsset(robloxClient, payload.AssetId, payload.AssetType, payload.ExportPath, payload.UniverseId) 
+	}
+    
+	if err != nil {
+		// KRİTİK DÜZELTME: Hatanın detayını terminale basıyoruz
+		fmt.Printf("KRİTİK SUNUCU HATASI (HTTP 500): Yükleme başarısız oldu: %s\n", err.Error()) 
+		
+        // Lua'ya hata mesajını gönder
+        errorResponse := fmt.Sprintf(`{"success":false,"error":"Yükleme Başarısız: %s"}`, err.Error())
+		http.Error(w, errorResponse, http.StatusInternalServerError)
+		return
+	}
+
+	// Başarılı yanıt
+	w.WriteHeader(http.StatusOK)
+	response := fmt.Sprintf(`{"success":true,"message":"%s başarıyla yeniden yüklendi (ID: %d)"}`, payload.AssetType, payload.AssetId)
+	w.Write([]byte(response))
+}
+
+// --- ANA FONKSİYON ---
 
 func main() {
-	log.Println("Asset-Reuploader-Clean başlatılıyor...")
-	
-	var cookieStr string
-	
-	// 1. Cookie'yi Dosyadan Oku
-	cookie, readErr := os.ReadFile(CookieFile)
-	
-	if readErr == nil {
-		// Dosya mevcutsa ve okunduysa, kullan
-		cookieStr = strings.TrimSpace(string(cookie))
-	} else if os.IsNotExist(readErr) || readErr != nil { 
-        // Dosya mevcut değilse veya başka bir okuma hatası varsa, kullanıcıdan girdi al
-		fmt.Println("--- Cookie dosyası (cookie.txt) bulunamadı veya okunamadı. ---")
-		cookieStr = getCookieFromUser()
-		
-		// Yeni Cookie'yi dosyaya yaz
-		if err := os.WriteFile(CookieFile, []byte(cookieStr), 0644); err != nil {
-			log.Printf("UYARI: Cookie dosyaya yazılamadı: %v", err)
-		} else {
-            fmt.Printf("Cookie başarıyla %s dosyasına kaydedildi. Sonraki çalıştırmalarda tekrar girmeyeceksiniz.\n", CookieFile)
-        }
+    // 1. Cookie okuma ve istemci oluşturma (Bu kısım sizde zaten olmalı)
+    // Varsayım: .ROBLOSECURITY çerezi "cookie.txt" dosyasından okunuyor.
+    cookie, err := os.ReadFile("cookie.txt")
+	if err != nil {
+		log.Fatalf("HATA: Cookie dosyası okunamadı: %v", err)
+	}
+    
+	robloxClient, err = roblox.NewClient(string(cookie))
+	if err != nil {
+		log.Fatalf("HATA: Roblox istemcisi oluşturulamadı veya CSRF token çekilemedi. Çereziniz geçersiz olabilir: %v", err)
 	}
 
-	// 2. Roblox İstemcisini Oluştur (CSRF Token'ı Çeker)
-	c, clientErr := roblox.NewClient(cookieStr)
-	if clientErr != nil {
-		// Eğer Cookie hatalıysa (CSRF çekilemiyorsa), programı sonlandır
-		log.Fatalf("HATA: Roblox istemcisi oluşturulamadı veya CSRF token çekilemedi. Çereziniz geçersiz olabilir: %v", clientErr)
-	}
+    // 2. HTTP sunucusunu başlatma
+	http.HandleFunc("/", handleReupload)
 
-	// 3. Plugin İsteklerini Dinlemeye Başla
-	fmt.Printf("Plugin isteklerini http://localhost:%s adresinde dinliyor...\n", Port)
-	
-	r := router.NewRouter(c)
-	http.Handle("/", r)
-
+	log.Printf("Plugin isteklerini http://localhost:%s adresinde dinliyor...", Port)
+	log.Printf("CSRF Token: %s", robloxClient.GetToken())
+    
 	if err := http.ListenAndServe(":"+Port, nil); err != nil {
-		log.Fatalf("Sunucu başlatılamadı: %v", err)
+		log.Fatalf("HTTP sunucusu başlatılamadı: %v", err)
 	}
 }
