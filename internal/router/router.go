@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/assets/animation"
-	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/assets/sound"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/pkg/animation"
+	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/pkg/sound"
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/roblox"
 	"github.com/111222Bomba/Asset-Reuploader-Clean/internal/types" // YENİ IMPORT
 )
@@ -54,3 +54,4 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": fmt.Sprintf("%s ID %d başarıyla yüklendi.", rawReq.AssetType, rawReq.AssetID)})
 }
+
